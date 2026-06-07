@@ -1,10 +1,9 @@
 //
 //  MiniPicordView 2.swift
-//  clause 0 
+//  clause 0
 //
 //  Created by Amandine on 01/04/26.
 //
-
 
 import SwiftUI
 
@@ -22,6 +21,7 @@ struct MiniPicordView: View {
     @State private var dragOffset = CGSize.zero
     @State private var position = CGPoint(x: 750, y: 350)
     @State private var showTyping = false
+    @State private var showLinkPulse = false
 
     enum Step { case alexIntro, haruResponse, alexChoice }
     @State private var currentStep: Step = .alexIntro
@@ -83,22 +83,43 @@ struct MiniPicordView: View {
                                                 .font(.system(size: 16))
                                                 .foregroundColor(.black)
                                         }
-                                        Button(action: { onLinkTap?() }) {
-                                            Text("CLAUSE 0")
-                                                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(Color.black)
-                                                .cornerRadius(8)
-                                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.4), lineWidth: 1))
+
+                                        // ── Bouton CLAUSE 0 avec pulse ──
+                                        ZStack {
+                                            // Ring pulse
+                                            if showLinkPulse {
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.white.opacity(0.5), lineWidth: 2)
+                                                    .scaleEffect(showLinkPulse ? 1.18 : 1.0)
+                                                    .opacity(showLinkPulse ? 0 : 0.6)
+                                                    .animation(
+                                                        .easeOut(duration: 1.1).repeatForever(autoreverses: false),
+                                                        value: showLinkPulse
+                                                    )
+                                            }
+
+                                            Button(action: { onLinkTap?() }) {
+                                                Text("CLAUSE 0")
+                                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                                    .foregroundColor(.white)
+                                                    .padding(.horizontal, 12)
+                                                    .padding(.vertical, 6)
+                                                    .background(Color.black)
+                                                    .cornerRadius(8)
+                                                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.7), lineWidth: 1))
+                                            }
+                                            .buttonStyle(.plain)
                                         }
-                                        .buttonStyle(.plain)
+                                        .onAppear {
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                showLinkPulse = true
+                                            }
+                                        }
                                     }
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
                                     .background(RoundedRectangle(cornerRadius: 18).fill(Color(hex: "e8e8e8")))
-                                    .frame(maxWidth: 320, alignment: .leading)
+                                    .frame(maxWidth: 400, alignment: .leading)
                                 } else {
                                     Text(message.text)
                                         .font(.system(size: 16))
@@ -108,10 +129,10 @@ struct MiniPicordView: View {
                                         .background(
                                             RoundedRectangle(cornerRadius: 18)
                                                 .fill(message.isAlex
-                                                      ? Color(hex: "2a6ef5") // ← bleu pour Alex
+                                                      ? Color(hex: "2a6ef5")
                                                       : Color(hex: "e8e8e8"))
                                         )
-                                        .frame(maxWidth: 320, alignment: message.isAlex ? .trailing : .leading)
+                                        .frame(maxWidth: 400, alignment: message.isAlex ? .trailing : .leading)
                                 }
                                 if !message.isAlex { Spacer() }
                             }
@@ -129,7 +150,8 @@ struct MiniPicordView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                 }
-                .frame(height: 180)
+                // ── Hauteur augmentée à 300 ──
+                .frame(height: 300)
                 .clipped()
                 .background(Color(hex: "1a1a1a"))
                 .onChange(of: messages.count) {
@@ -146,7 +168,6 @@ struct MiniPicordView: View {
                 Color(hex: "141414")
 
                 if showChoice {
-                    // Choix disponible → bulle bleue cliquable
                     Button(action: { sendChoice() }) {
                         HStack {
                             Spacer()
@@ -162,7 +183,6 @@ struct MiniPicordView: View {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    // En attente — texte discret
                     HStack {
                         Spacer()
                         Text("tap to reply")
@@ -173,9 +193,8 @@ struct MiniPicordView: View {
                     .padding(.vertical, 14)
                 }
             }
-            .frame(height: 44)
+            .frame(height: 100)
 
-            // Ferme automatiquement 1s après la fin
             if conversationDone {
                 Color.clear.onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
@@ -216,7 +235,6 @@ struct MiniPicordView: View {
             return
         }
         let ex = exchanges[currentExchange]
-        // Trois points avant le message
         showTyping = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             showTyping = false
@@ -305,7 +323,7 @@ struct TypingIndicator: View {
                 ),
                 Exchange(
                     alexIntro: nil,
-                    haruMessage: "trust me",
+                    haruMessage: "just tap on CLAUSE 0 to open it 🖤",
                     choices: []
                 )
             ],
