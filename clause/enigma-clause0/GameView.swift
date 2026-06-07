@@ -7,9 +7,11 @@ enum GamePhase {
     case tuto
     case enigma
     case spiritIntro
+    case spiritWelcome
     case blackContinue
     case spiritFinal
     case ending
+    case toBeContinued
 }
 
 struct GameView: View {
@@ -41,7 +43,8 @@ struct GameView: View {
 
     @State private var endingTextOpacity: Double = 0
     @State private var clauseTextOpacity: Double = 0
-    @State private var thankYouOpacity: Double = 0
+    @State private var spiritFarewellOpacity: Double = 0
+    @State private var toBeContinuedOpacity: Double = 0
     @State private var showNotification = false
     @State private var keepSpiritVisible = false
 
@@ -50,9 +53,9 @@ struct GameView: View {
         Exchange(alexIntro: nil, haruMessage: "sure 🙄 as always, last minute.. 😂", choices: ["oh stop it, i'll be done in time"]),
         Exchange(alexIntro: nil, haruMessage: "anyway. found this puzzle game. it's actually really good. try it !", choices: ["mmh ok. might as well take a break before finishing my part 😅"]),
         Exchange(alexIntro: nil, haruMessage: "yes ! here: [lien]", choices: ["ok ok"]),
-        Exchange(alexIntro: nil, haruMessage: "trust me 🙂", choices: [])
-        
+        Exchange(alexIntro: nil, haruMessage: "just tap on CLAUSE 0 to open it 🖤", choices: [])
     ]
+
     func triggerDialogue(_ texts: [String], portraits: [String], then completion: @escaping () -> Void) {
         dialogueTexts = texts
         dialoguePortraits = portraits
@@ -168,33 +171,38 @@ struct GameView: View {
             if phase == .contract {
                 ZStack {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("TERMS OF SERVICE").font(.system(size: 28, weight: .heavy, design: .monospaced)).foregroundColor(.white).padding(.top, 30)
-                            Text("Version 14.2.1 — Last updated March 2026").font(.system(size: 12, design: .monospaced)).foregroundColor(.gray)
-                            Divider().background(Color.gray)
-                            cSection("SECTION 1 — ACCEPTANCE OF TERMS", "By downloading or using this application, you agree to be bound by these Terms of Service.")
-                            cSection("SECTION 2 — USER ACCOUNT", "You are responsible for maintaining the confidentiality of your account credentials.")
-                            cSection("SECTION 3 — PRIVACY POLICY", "We collect personal information including email address, device information, usage data, and cookies.")
-                            cSection("SECTION 4 — DATA STORAGE", "All user data is stored on secure servers. We retain your data for as long as your account remains active.")
-                            cSection("SECTION 5 — INTELLECTUAL PROPERTY", "All content and functionality are owned by the developer and protected by copyright laws.")
-                            cSection("SECTION 6 — PROHIBITED USES", "You may not use this application for any unlawful purpose.")
-                            cSection("SECTION 7 — LIMITATION OF LIABILITY", "We shall not be liable for any indirect or consequential damages.")
-                            cSection("SECTION 8 — GOVERNING LAW", "These terms shall be governed by applicable law.")
-                            Divider().background(Color.gray)
-                            cSection("SECTION 9 — SOUL TRANSFER AGREEMENT", "By using this application, you agree to surrender all rights to your personal data, your memories, your dreams, and your soul. This agreement is binding for eternity.")
-                            cSection("SECTION 10 — SCOPE OF TRANSFER", "The transfer includes all passwords, browsing history, private messages, photographs, voice recordings, location data, biometric information, sleeping patterns, emotional responses, and subconscious thoughts.")
-                            cSection("SECTION 11 — DURATION", "This agreement is binding for eternity. There is no termination clause. No refund policy. No customer support.")
-                            cSection("SECTION 12 — CONSENT", "By accepting, the Vessel confirms having read all 666 pages of this document. Clicking ACCEPT constitutes a legally binding signature across all dimensions.")
-                            cSection("SECTION 13 — CONSEQUENCES", "The Collector reserves the right to collect what was promised at any time, without prior notice. Previous Vessels have been warned.")
-                            Text("SECTION 14 — FINAL CLAUSE").font(.system(size: 16, weight: .bold, design: .monospaced)).foregroundColor(.white)
-                            Text("You should have read this. You didn't. Now it's too late.").font(.system(size: 13, weight: .bold, design: .monospaced)).foregroundColor(.white)
+                        VStack(alignment: .leading, spacing: 24) {
+
+                            Text("CLAUSE 0")
+                                .font(.system(size: 28, weight: .heavy, design: .monospaced))
+                                .foregroundColor(.white)
+                                .padding(.top, 30)
+                            Text("CONTRACT")
+                                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                .foregroundColor(Color(hex: "888888"))
+                                .kerning(4)
+                            Text("Version 14.2.1 — Last updated March 2026")
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundColor(.gray)
+
+                            Divider().background(Color.white.opacity(0.2))
+
+                            ForEach(contractSections, id: \.self) { section in
+                                contractBlock(section)
+                            }
+
+                            Divider().background(Color.white.opacity(0.2))
+
+                            ForEach(hiddenSections, id: \.self) { section in
+                                contractBlock(section)
+                            }
+
                             Spacer().frame(height: 80)
                         }
                         .padding(.horizontal, 190)
                     }
                     .allowsHitTesting(!showDialogue && !showSignaturePopup)
 
-                    // ── DIALOGUE local au contract ─────────────────
                     if showDialogue && phase == .contract {
                         DialogueView(
                             dialogues: dialogueTexts,
@@ -208,13 +216,9 @@ struct GameView: View {
                         )
                     }
 
-                    // ── POP-UP SIGNATURE — apparaît après le dialogue ──
                     if showSignaturePopup {
-                        // Fond semi-transparent
-                        Color.black.opacity(0.7)
-                            .ignoresSafeArea()
+                        Color.black.opacity(0.7).ignoresSafeArea()
 
-                        // Fenêtre pop-up
                         VStack(spacing: 24) {
                             Text("CLAUSE 0")
                                 .font(.system(size: 28, weight: .heavy, design: .monospaced))
@@ -227,8 +231,7 @@ struct GameView: View {
 
                             SignatureView(onSigned: {
                                 showSignaturePopup = false
-                                enigmaStarted = true
-                                phase = .tuto
+                                phase = .spiritWelcome
                             })
                         }
                         .padding(40)
@@ -242,28 +245,56 @@ struct GameView: View {
                 }
                 .onAppear {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        // ── Dialogue Alex sarcastique ──
                         triggerDialogue(
-                            ["Terms of service.", "Again.", "Every single app.", "Nobody reads these.", "...whatever."],
-                            portraits: ["alex_neutre","alex_neutre","alex_neutre","alex_neutre","alex_neutre"]
+                            ["Another 42-page contract.", "Who actually reads contract.", "...where do I sign ?"],
+                            portraits: ["alex_neutre","alex_neutre","alex_neutre"]
                         ) {
-                            // Dialogue fini → pop-up signature apparaît
                             withAnimation(.spring()) { showSignaturePopup = true }
                         }
                     }
                 }
             }
 
+            // ── SPIRIT WELCOME — intro esprit après signature ──────
+            if phase == .spiritWelcome {
+                ZStack {
+                    Color.black
+                    Image("spirit").resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
+                    DialogueView(
+                        dialogues: [
+                            "Welcome.",
+                            "You found it.",
+                            "Or maybe it found you.",
+                            "CLAUSE 0.",
+                            "A game with rules.",
+                            "Simple ones.",
+                            "Read.",
+                            "Understand.",
+                            "Play.",
+                            "You already failed the first two.",
+                            "Let's see about the third."
+                        ],
+                        portraits: Array(repeating: "spirit", count: 11),
+                        onComplete: {
+                            enigmaStarted = true
+                            phase = .tuto
+                        }
+                    )
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea()
+            }
+
             // ── TUTO ──────────────────────────────────────────────
             if phase == .tuto {
                 VStack(spacing: 50) {
                     Spacer()
-
                     Text("HOW TO PLAY")
                         .font(.system(size: 22, weight: .heavy, design: .monospaced))
                         .foregroundColor(Color(hex: "888888"))
                         .kerning(4)
 
-                    // Les lignes changent selon où on en est
                     VStack(alignment: .leading, spacing: 28) {
                         if !enigmaStarted {
                             tutoLine(icon: "hand.point.up.left", text: "Tap anywhere to continue the story")
@@ -291,11 +322,11 @@ struct GameView: View {
                             .cornerRadius(20)
                             .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white, lineWidth: 2))
                     }
-
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+
             // ── ENIGMES ───────────────────────────────────────────
             if enigmaStarted {
                 EnigmaView(
@@ -420,15 +451,13 @@ struct GameView: View {
                     VStack(spacing: 40) {
                         Text("You should have read it.")
                             .font(.system(size: 30, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white).opacity(endingTextOpacity)
+                            .foregroundColor(.white)
+                            .opacity(endingTextOpacity)
                         Text("Clause 0 : By proceeding, you agree to all terms,\npresent, past, and future,\nwhether read or not.\n\nYou proceeded.")
                             .font(.system(size: 25, design: .monospaced))
                             .foregroundColor(.gray)
-                            .multilineTextAlignment(.center).opacity(clauseTextOpacity)
-                        Text("Thank you for playing.")
-                            .font(.system(size: 18, weight: .light, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.4))
-                            .opacity(thankYouOpacity)
+                            .multilineTextAlignment(.center)
+                            .opacity(clauseTextOpacity)
                     }
                 }
                 .ignoresSafeArea()
@@ -440,10 +469,59 @@ struct GameView: View {
                         withAnimation(.easeIn(duration: 2)) { clauseTextOpacity = 1 }
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 8) {
-                        withAnimation(.easeIn(duration: 2)) { thankYouOpacity = 1 }
+                        withAnimation(.easeOut(duration: 1)) {
+                            endingTextOpacity = 0
+                            clauseTextOpacity = 0
+                        }
                     }
-                    // Retour HomeView après 12 secondes
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 9.5) {
+                        phase = .toBeContinued
+                    }
+                }
+            }
+
+            // ── SPIRIT FAREWELL + TO BE CONTINUED ─────────────────
+            if phase == .toBeContinued {
+                ZStack {
+                    Color.black
+                    Image("spirit").resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    VStack(spacing: 50) {
+                        Spacer()
+
+                        VStack(spacing: 16) {
+                            Text("Well played, Alex.")
+                                .font(.system(size: 24, weight: .medium, design: .monospaced))
+                                .foregroundColor(.white)
+                            Text("But you were never the only one.")
+                                .font(.system(size: 20, design: .monospaced))
+                                .foregroundColor(Color(hex: "aaaaaa"))
+                            Text("I'll find someone else to play with.")
+                                .font(.system(size: 20, design: .monospaced))
+                                .foregroundColor(Color(hex: "aaaaaa"))
+                        }
+                        .opacity(spiritFarewellOpacity)
+
+                        // ── TO BE CONTINUED — grand et blanc ──
+                        Text("TO BE CONTINUED")
+                            .font(.system(size: 28, weight: .bold, design: .monospaced))
+                            .foregroundColor(.white)
+                            .kerning(6)
+                            .opacity(toBeContinuedOpacity)
+
+                        Spacer()
+                    }
+                    .padding(.horizontal, 60)
+                }
+                .ignoresSafeArea()
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        withAnimation(.easeIn(duration: 2)) { spiritFarewellOpacity = 1 }
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                        withAnimation(.easeIn(duration: 2)) { toBeContinuedOpacity = 1 }
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 9) {
                         withAnimation(.easeOut(duration: 1.5)) { onQuit() }
                     }
                 }
@@ -524,6 +602,43 @@ struct GameView: View {
                     ) {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showNotification = true }
                     }
+                }
+            }
+        }
+    }
+
+    // ── CONTRAT : blocs de rectangles illisibles ──────────────────
+    let contractSections = [
+        "SECTION 1 — ACCEPTANCE OF TERMS",
+        "SECTION 2 — USER ACCOUNT",
+        "SECTION 3 — PRIVACY POLICY",
+        "SECTION 4 — DATA STORAGE",
+        "SECTION 5 — INTELLECTUAL PROPERTY",
+        "SECTION 6 — PROHIBITED USES",
+        "SECTION 7 — LIMITATION OF LIABILITY",
+        "SECTION 8 — GOVERNING LAW"
+    ]
+
+    let hiddenSections = [
+        "SECTION 9 — SOUL TRANSFER AGREEMENT",
+        "SECTION 10 — SCOPE OF TRANSFER",
+        "SECTION 11 — DURATION",
+        "SECTION 12 — CONSENT",
+        "SECTION 13 — CONSEQUENCES",
+        "SECTION 14 — FINAL CLAUSE"
+    ]
+
+    func contractBlock(_ title: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(0..<Int.random(in: 2...4), id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(Color.white.opacity(0.25))
+                        .frame(maxWidth: i == 2 ? CGFloat.random(in: 180...300) : .infinity)
+                        .frame(height: 8)
                 }
             }
         }
